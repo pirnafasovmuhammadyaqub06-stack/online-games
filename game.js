@@ -1,128 +1,93 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8">
-    <title>Iloncha O'yini</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #222;
-            flex-direction: column;
-        }
-        canvas {
-            border: 2px solid #fff;
-            background-color: #000;
-        }
-        .score {
-            color: white;
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-family: Arial, sans-serif;
-        }
-    </style>
-</head>
-<body>
-    <div class="score">Shtat: <span id="score">0</span></div>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreText = document.getElementById("score");
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
+const grid = 20;
+let snake = [{ x: 10, y: 10 }];
+let food = randomFood();
+let dir = { x: 0, y: 0 };
+let score = 0;
+let speed = 150;
 
-        const gridSize = 20;
-        let snake = [{x: 10, y: 10}];
-        let food = {x: 15, y: 15};
-        let direction = {x: 0, y: 0};
-        let score = 0;
-        let gameSpeed = 150;
+function gameLoop() {
+    update();
+    draw();
+    setTimeout(gameLoop, speed);
+}
 
-        function drawGame() {
-            updateGame();
-            
-            // Kanvasni tozalash
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+function update() {
+    if (dir.x === 0 && dir.y === 0) return;
 
-            // Ilonchani chizish
-            ctx.fillStyle = '#0f0';
-            snake.forEach(segment => {
-                ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
-            });
+    const head = {
+        x: snake[0].x + dir.x,
+        y: snake[0].y + dir.y
+    };
 
-            // Ovqatni chizish
-            ctx.fillStyle = '#f00';
-            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
+    // devor
+    if (head.x < 0 || head.y < 0 ||
+        head.x >= canvas.width / grid ||
+        head.y >= canvas.height / grid) {
+        reset();
+        return;
+    }
 
-            setTimeout(drawGame, gameSpeed);
-        }
+    // o‘ziga urilishi
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+        reset();
+        return;
+    }
 
-        function updateGame() {
-            if (direction.x === 0 && direction.y === 0) return;
+    snake.unshift(head);
 
-            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+    // ovqat
+    if (head.x === food.x && head.y === food.y) {
+        score += 10;
+        scoreText.textContent = score;
+        food = randomFood();
+        speed = Math.max(50, speed - 5);
+    } else {
+        snake.pop();
+    }
+}
 
-            // Devorga urilishni tekshirish (TUZATILDI)
-            if (head.x < 0 || head.x >= canvas.width/gridSize || 
-                head.y < 0 || head.y >= canvas.height/gridSize) {
-                resetGame();
-                return;
-            }
+function draw() {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // O'ziga urilishni tekshirish
-            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-                resetGame();
-                return;
-            }
+    // ilon
+    ctx.fillStyle = "lime";
+    snake.forEach(p => {
+        ctx.fillRect(p.x * grid, p.y * grid, grid - 2, grid - 2);
+    });
 
-            snake.unshift(head);
+    // ovqat
+    ctx.fillStyle = "red";
+    ctx.fillRect(food.x * grid, food.y * grid, grid - 2, grid - 2);
+}
 
-            // Ovqat yeyishni tekshirish
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                scoreElement.textContent = score;
-                generateFood();
-                gameSpeed = Math.max(50, gameSpeed - 2); 
-            } else {
-                snake.pop();
-            }
-        }
+function randomFood() {
+    return {
+        x: Math.floor(Math.random() * (canvas.width / grid)),
+        y: Math.floor(Math.random() * (canvas.height / grid))
+    };
+}
 
-        function generateFood() {
-            food = {
-                x: Math.floor(Math.random() * (canvas.width / gridSize)),
-                y: Math.floor(Math.random() * (canvas.height / gridSize))
-            };
-            if (snake.some(segment => segment.x === food.x && segment.y === food.y)) {
-                generateFood();
-            }
-        }
+function reset() {
+    alert("O‘yin tugadi! Score: " + score);
+    snake = [{ x: 10, y: 10 }];
+    dir = { x: 0, y: 0 };
+    score = 0;
+    speed = 150;
+    scoreText.textContent = score;
+    food = randomFood();
+}
 
-        function resetGame() {
-            alert(`O'yin tugadi! Sizning balingiz: ${score}`); // TUZATILDI
-            snake = [{x: 10, y: 10}];
-            direction = {x: 0, y: 0};
-            score = 0;
-            scoreElement.textContent = score;
-            gameSpeed = 150;
-            generateFood();
-        }
+// boshqaruv
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowUp" && dir.y === 0) dir = { x: 0, y: -1 };
+    if (e.key === "ArrowDown" && dir.y === 0) dir = { x: 0, y: 1 };
+    if (e.key === "ArrowLeft" && dir.x === 0) dir = { x: -1, y: 0 };
+    if (e.key === "ArrowRight" && dir.x === 0) dir = { x: 1, y: 0 };
+});
 
-        // Klaviatura boshqaruvi (TO'LDIRILDI)
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'ArrowUp':    if (direction.y === 0) direction = {x: 0, y: -1}; break;
-                case 'ArrowDown':  if (direction.y === 0) direction = {x: 0, y: 1}; break;
-                case 'ArrowLeft':  if (direction.x === 0) direction = {x: -1, y: 0}; break;
-                case 'ArrowRight': if (direction.x === 0) direction = {x: 1, y: 0}; break;
-            }
-        });
-
-        drawGame(); // O'yinni boshlash
-    </script>
-</body>
-</html>
+gameLoop();
